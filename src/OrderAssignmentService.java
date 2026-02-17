@@ -30,6 +30,39 @@ public class OrderAssignmentService {
     }
 
     /**
+     * Обробляє одне замовлення від будь-якого закладу (ресторан, кафе, магазин тощо).
+     *
+     * @param placeName   назва закладу (для інформаційного виводу)
+     * @param placePoint  координати закладу на сітці 100x100
+     * @param couriers    список усіх курʼєрів
+     * @return текстовий результат з інформацією про призначеного курʼєра
+     *         або "No couriers available", якщо вільних немає
+     */
+    public String assignOrderFromPlace(String placeName, Point placePoint, List<Courier> couriers) {
+        if (placePoint == null || !CityGrid.isValid(placePoint)) {
+            return "Invalid place location";
+        }
+        if (couriers == null || couriers.isEmpty()) {
+            return "No couriers available";
+        }
+
+        // Створюємо "технічне" замовлення, де destination = координати закладу
+        Order technicalOrder = new Order(placeName, placePoint);
+
+        Courier bestCourier = findBestCourierForOrder(technicalOrder, couriers);
+        if (bestCourier == null) {
+            return "No couriers available";
+        }
+
+        // Закріплюємо курʼєра за цим замовленням
+        bestCourier.setStatus(CourierStatus.BUSY);
+        int distance = CityGrid.distance(bestCourier.getLocation(), placePoint);
+
+        return "Order from '" + placeName + "' assigned to courier '" + bestCourier.getId() +
+                "' at distance " + distance;
+    }
+
+    /**
      * Повертає найближчого доступного курʼєра до точки доставки замовлення.
      */
     public Courier findBestCourierForOrder(Order order, List<Courier> couriers) {
