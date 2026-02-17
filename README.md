@@ -5,7 +5,8 @@
 Інструменти: Cursor(Agent auto), VS Code
 
 # Stage 2
-Інструменти: Cursor(Agent auto), Antigravity (Claude Opus), VS Code
+Інструменти: Cursor(Agent auto), Antigravity (Claude Opus 4.6), VS Code
 
 # Stage 3
 
+Інструменти: Cursor(Agent auto), Antigravity (Claude Opus 4.6), VS Code
