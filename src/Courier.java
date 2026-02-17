@@ -3,11 +3,13 @@ public class Courier {
     private final String id;
     private Point location;
     private CourierStatus status;
+    private final TransportType transportType;
 
-    public Courier(String id, Point location) {
+    public Courier(String id, Point location, TransportType transportType) {
         this.id = id;
         this.location = location;
         this.status = CourierStatus.AVAILABLE;
+        this.transportType = transportType;
     }
 
     public String getId() {
@@ -30,8 +32,16 @@ public class Courier {
         this.status = status;
     }
 
+    public TransportType getTransportType() {
+        return transportType;
+    }
+
     public boolean isAvailable() {
         return status == CourierStatus.AVAILABLE;
+    }
+
+    public boolean canCarry(double weight) {
+        return weight <= transportType.getMaxWeight();
     }
 
     @Override
@@ -40,7 +50,8 @@ public class Courier {
                 "id='" + id + '\'' +
                 ", location=" + location +
                 ", status=" + status +
+                ", transport=" + transportType +
+                " (max " + transportType.getMaxWeight() + "kg)" +
                 '}';
     }
 }
-
