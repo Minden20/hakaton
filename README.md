@@ -7,3 +7,5 @@
 # Stage 2
 Інструменти: Cursor(Agent auto), Antigravity (Claude Opus), VS Code
 
+# Stage 3
+

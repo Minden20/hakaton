@@ -87,6 +87,7 @@ public class OrderAssignmentService {
 
         Courier bestCourier = null;
         int bestDistance = Integer.MAX_VALUE;
+        int bestCompleted = Integer.MAX_VALUE;
 
         for (Courier courier : couriers) {
             if (!courier.isAvailable()) {
@@ -100,8 +101,17 @@ public class OrderAssignmentService {
                 continue;
             }
             int distance = CityGrid.distance(location, destination);
+            int completed = courier.getCompletedOrdersToday();
+
+            // Пріоритет: 1) менша відстань
+            // 2) якщо різниця у відстані < 1 — обираємо того, хто менше виконав сьогодні
             if (distance < bestDistance) {
                 bestDistance = distance;
+                bestCompleted = completed;
+                bestCourier = courier;
+            } else if (Math.abs(distance - bestDistance) < 1 && completed < bestCompleted) {
+                bestDistance = distance;
+                bestCompleted = completed;
                 bestCourier = courier;
             }
         }

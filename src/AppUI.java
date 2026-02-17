@@ -14,17 +14,22 @@ public class AppUI extends JFrame {
     private final java.util.Map<Order, Courier> assignments = new java.util.LinkedHashMap<>();
 
     private final OrderAssignmentService service = new OrderAssignmentService();
+    private final OrderQueue orderQueue;
 
     private DefaultTableModel courierTableModel;
     private DefaultTableModel orderTableModel;
+    private DefaultTableModel queueTableModel;
     private JTextArea logArea;
     private CityPanel cityPanel;
+    private JLabel queueCountLabel;
 
     public AppUI() {
         super("Courier Delivery System");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(1100, 750);
+        setSize(1200, 800);
         setLocationRelativeTo(null);
+
+        this.orderQueue = new OrderQueue(service);
 
         initCouriers();
         initUI();
@@ -49,7 +54,7 @@ public class AppUI extends JFrame {
 
         // Courier table
         courierTableModel = new DefaultTableModel(
-                new String[]{"ID", "Локація", "Транспорт", "Макс. вага", "Статус"}, 0) {
+                new String[]{"ID", "Локація", "Транспорт", "Макс. вага", "Статус", "Виконано"}, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -58,11 +63,11 @@ public class AppUI extends JFrame {
         courierScroll.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(new Color(80, 80, 80)),
                 "Кур'єри", 0, 0, null, new Color(200, 200, 200)));
-        courierScroll.setPreferredSize(new Dimension(450, 170));
+        courierScroll.setPreferredSize(new Dimension(500, 150));
 
         // Order table
         orderTableModel = new DefaultTableModel(
-                new String[]{"ID", "Точка", "Вага (кг)", "Кур'єр"}, 0) {
+                new String[]{"ID", "Звідки", "Куди", "Вага (кг)", "Кур'єр"}, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -71,46 +76,87 @@ public class AppUI extends JFrame {
         orderScroll.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(new Color(80, 80, 80)),
                 "Замовлення", 0, 0, null, new Color(200, 200, 200)));
-        orderScroll.setPreferredSize(new Dimension(450, 170));
+        orderScroll.setPreferredSize(new Dimension(500, 130));
 
-        JPanel tablesPanel = new JPanel(new GridLayout(2, 1, 0, 5));
+        // Queue table
+        queueTableModel = new DefaultTableModel(
+                new String[]{"ID", "Куди", "Вага (кг)"}, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        JTable queueTable = createStyledTable(queueTableModel);
+        JScrollPane queueScroll = new JScrollPane(queueTable);
+        queueCountLabel = styledLabel("Черга: 0");
+        queueCountLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        queueCountLabel.setForeground(new Color(255, 183, 77));
+
+        JPanel queueHeader = new JPanel(new BorderLayout());
+        queueHeader.setOpaque(false);
+        queueHeader.add(queueCountLabel, BorderLayout.WEST);
+
+        JPanel queuePanel = new JPanel(new BorderLayout(0, 2));
+        queuePanel.setOpaque(false);
+        queuePanel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(80, 80, 80)),
+                "Черга замовлень", 0, 0, null, new Color(200, 200, 200)));
+        queuePanel.add(queueScroll, BorderLayout.CENTER);
+        queuePanel.setPreferredSize(new Dimension(500, 100));
+
+        JPanel tablesPanel = new JPanel(new GridLayout(3, 1, 0, 4));
         tablesPanel.setOpaque(false);
         tablesPanel.add(courierScroll);
         tablesPanel.add(orderScroll);
+        tablesPanel.add(queuePanel);
 
         leftPanel.add(tablesPanel, BorderLayout.CENTER);
 
         // --- Form panel ---
-        JPanel formPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
         formPanel.setBackground(new Color(40, 40, 40));
         formPanel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(new Color(80, 80, 80)),
-                "Нове замовлення", 0, 0, null, new Color(200, 200, 200)));
+                "Керування", 0, 0, null, new Color(200, 200, 200)));
 
-        JLabel lblX = styledLabel("X:");
-        JTextField tfX = styledField(4);
-        JLabel lblY = styledLabel("Y:");
-        JTextField tfY = styledField(4);
-        JLabel lblW = styledLabel("Вага (кг):");
-        JTextField tfW = styledField(5);
+        // Row 1: new order
+        JPanel orderFormRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 3));
+        orderFormRow.setOpaque(false);
 
-        JButton btnAdd = new JButton("Створити");
-        btnAdd.setBackground(new Color(46, 125, 50));
-        btnAdd.setForeground(Color.WHITE);
-        btnAdd.setFocusPainted(false);
-        btnAdd.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        JLabel lblPX = styledLabel("Звідки X:");
+        JTextField tfPX = styledField(3);
+        JLabel lblPY = styledLabel("Y:");
+        JTextField tfPY = styledField(3);
+        JLabel lblDX = styledLabel("Куди X:");
+        JTextField tfDX = styledField(3);
+        JLabel lblDY = styledLabel("Y:");
+        JTextField tfDY = styledField(3);
+        JLabel lblW = styledLabel("Вага:");
+        JTextField tfW = styledField(4);
 
-        JButton btnReset = new JButton("Скинути все");
-        btnReset.setBackground(new Color(198, 40, 40));
-        btnReset.setForeground(Color.WHITE);
-        btnReset.setFocusPainted(false);
-        btnReset.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        JButton btnAdd = createButton("Створити", new Color(46, 125, 50));
 
-        formPanel.add(lblX); formPanel.add(tfX);
-        formPanel.add(lblY); formPanel.add(tfY);
-        formPanel.add(lblW); formPanel.add(tfW);
-        formPanel.add(btnAdd);
-        formPanel.add(btnReset);
+        orderFormRow.add(lblPX); orderFormRow.add(tfPX);
+        orderFormRow.add(lblPY); orderFormRow.add(tfPY);
+        orderFormRow.add(lblDX); orderFormRow.add(tfDX);
+        orderFormRow.add(lblDY); orderFormRow.add(tfDY);
+        orderFormRow.add(lblW); orderFormRow.add(tfW);
+        orderFormRow.add(btnAdd);
+
+        // Row 2: actions
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 3));
+        actionRow.setOpaque(false);
+
+        JLabel lblCourierId = styledLabel("ID кур'єра:");
+        JTextField tfCourierId = styledField(4);
+        JButton btnComplete = createButton("Завершити замовлення", new Color(33, 150, 243));
+        JButton btnReset = createButton("Скинути все", new Color(198, 40, 40));
+
+        actionRow.add(lblCourierId); actionRow.add(tfCourierId);
+        actionRow.add(btnComplete);
+        actionRow.add(btnReset);
+
+        formPanel.add(orderFormRow);
+        formPanel.add(actionRow);
 
         leftPanel.add(formPanel, BorderLayout.SOUTH);
 
@@ -119,7 +165,7 @@ public class AppUI extends JFrame {
         rightPanel.setOpaque(false);
 
         cityPanel = new CityPanel();
-        cityPanel.setPreferredSize(new Dimension(500, 500));
+        cityPanel.setPreferredSize(new Dimension(550, 550));
         cityPanel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(new Color(80, 80, 80)),
                 "Карта міста (100×100)", 0, 0, null, new Color(200, 200, 200)));
@@ -134,26 +180,29 @@ public class AppUI extends JFrame {
         logScroll.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(new Color(80, 80, 80)),
                 "Лог", 0, 0, null, new Color(200, 200, 200)));
-        logScroll.setPreferredSize(new Dimension(500, 140));
+        logScroll.setPreferredSize(new Dimension(550, 140));
         rightPanel.add(logScroll, BorderLayout.SOUTH);
 
         // --- Combine ---
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
-        split.setDividerLocation(450);
+        split.setDividerLocation(500);
         split.setOpaque(false);
         split.setBorder(null);
         root.add(split, BorderLayout.CENTER);
 
         setContentPane(root);
-        refreshCourierTable();
+        refreshAll();
 
         // --- Button actions ---
         btnAdd.addActionListener(e -> {
             try {
-                int x = Integer.parseInt(tfX.getText().trim());
-                int y = Integer.parseInt(tfY.getText().trim());
+                int px = Integer.parseInt(tfPX.getText().trim());
+                int py = Integer.parseInt(tfPY.getText().trim());
+                int dx = Integer.parseInt(tfDX.getText().trim());
+                int dy = Integer.parseInt(tfDY.getText().trim());
                 double w = Double.parseDouble(tfW.getText().trim());
-                if (x < 0 || x >= 100 || y < 0 || y >= 100) {
+                if (px < 0 || px >= 100 || py < 0 || py >= 100 ||
+                    dx < 0 || dx >= 100 || dy < 0 || dy >= 100) {
                     log("Помилка: координати мають бути 0-99");
                     return;
                 }
@@ -161,19 +210,32 @@ public class AppUI extends JFrame {
                     log("Помилка: вага має бути > 0");
                     return;
                 }
-                createOrder(x, y, w);
-                tfX.setText(""); tfY.setText(""); tfW.setText("");
+                createOrder(px, py, dx, dy, w);
+                tfPX.setText(""); tfPY.setText("");
+                tfDX.setText(""); tfDY.setText("");
+                tfW.setText("");
             } catch (NumberFormatException ex) {
                 log("Помилка: введіть коректні числа");
             }
         });
 
+        btnComplete.addActionListener(e -> {
+            String id = tfCourierId.getText().trim();
+            if (id.isEmpty()) {
+                log("Помилка: введіть ID кур'єра");
+                return;
+            }
+            completeOrderForCourier(id);
+            tfCourierId.setText("");
+        });
+
         btnReset.addActionListener(e -> resetAll());
     }
 
-    private void createOrder(int x, int y, double weight) {
-        Point dest = new Point(x, y);
-        Order order = new Order(dest, weight);
+    private void createOrder(int px, int py, int dx, int dy, double weight) {
+        Point place = new Point(px, py);
+        Point dest = new Point(dx, dy);
+        Order order = new Order(place, dest, weight);
         orders.add(order);
 
         Courier best = service.findBestCourierForOrder(order, couriers);
@@ -181,29 +243,69 @@ public class AppUI extends JFrame {
             best.setStatus(CourierStatus.BUSY);
             assignments.put(order, best);
             int dist = CityGrid.distance(best.getLocation(), dest);
-            log("Замовлення " + shortId(order.getId()) + " (" + weight + "кг) → кур'єр " +
-                    best.getId() + " [" + transportLabel(best.getTransportType()) + "], відстань: " + dist);
+            log("✓ " + shortId(order.getId()) + " (" + weight + "кг) → " +
+                    best.getId() + " [" + transportLabel(best.getTransportType()) +
+                    ", виконано: " + best.getCompletedOrdersToday() + "], відстань: " + dist);
         } else {
-            log("Замовлення " + shortId(order.getId()) + " (" + weight + "кг) — жоден кур'єр не підходить!");
+            orderQueue.enqueue(order);
+            log("⏳ " + shortId(order.getId()) + " (" + weight + "кг) → в чергу (немає вільного кур'єра)");
         }
 
-        refreshCourierTable();
-        refreshOrderTable();
-        cityPanel.repaint();
+        refreshAll();
+    }
+
+    private void completeOrderForCourier(String courierId) {
+        Courier courier = null;
+        for (Courier c : couriers) {
+            if (c.getId().equalsIgnoreCase(courierId)) {
+                courier = c;
+                break;
+            }
+        }
+        if (courier == null) {
+            log("Помилка: кур'єра '" + courierId + "' не знайдено");
+            return;
+        }
+        if (courier.isAvailable()) {
+            log("Помилка: кур'єр " + courier.getId() + " вже вільний");
+            return;
+        }
+
+        courier.completeOrder();
+        log("✓ Кур'єр " + courier.getId() + " завершив замовлення (всього сьогодні: " +
+                courier.getCompletedOrdersToday() + ")");
+
+        // Спробувати призначити замовлення з черги
+        List<OrderQueue.AssignmentResult> fromQueue = orderQueue.tryAssignPending(couriers);
+        for (OrderQueue.AssignmentResult ar : fromQueue) {
+            assignments.put(ar.getOrder(), ar.getCourier());
+            int dist = CityGrid.distance(ar.getCourier().getLocation(), ar.getOrder().getDestination());
+            log("  ↳ Із черги: " + shortId(ar.getOrder().getId()) + " → " +
+                    ar.getCourier().getId() + " [" + transportLabel(ar.getCourier().getTransportType()) + "], відстань: " + dist);
+        }
+
+        refreshAll();
     }
 
     private void resetAll() {
         orders.clear();
         assignments.clear();
         assignmentLog.clear();
+        orderQueue.clear();
         logArea.setText("");
         for (Courier c : couriers) {
             c.setStatus(CourierStatus.AVAILABLE);
+            c.resetDailyStats();
         }
+        refreshAll();
+        log("Система скинута — всі кур'єри вільні, черга порожня");
+    }
+
+    private void refreshAll() {
         refreshCourierTable();
         refreshOrderTable();
+        refreshQueueTable();
         cityPanel.repaint();
-        log("Система скинута — всі кур'єри вільні");
     }
 
     private void refreshCourierTable() {
@@ -214,7 +316,8 @@ public class AppUI extends JFrame {
                     c.getLocation().toString(),
                     transportLabel(c.getTransportType()),
                     c.getTransportType().getMaxWeight() + " кг",
-                    c.isAvailable() ? "Вільний" : "Зайнятий"
+                    c.isAvailable() ? "✓ Вільний" : "⊘ Зайнятий",
+                    c.getCompletedOrdersToday()
             });
         }
     }
@@ -225,9 +328,25 @@ public class AppUI extends JFrame {
             Courier assigned = assignments.get(o);
             orderTableModel.addRow(new Object[]{
                     shortId(o.getId()),
+                    o.getPlacePoint().toString(),
                     o.getDestination().toString(),
                     o.getWeight(),
-                    assigned != null ? assigned.getId() + " [" + transportLabel(assigned.getTransportType()) + "]" : "—"
+                    assigned != null
+                            ? assigned.getId() + " [" + transportLabel(assigned.getTransportType()) + "]"
+                            : "— в черзі"
+            });
+        }
+    }
+
+    private void refreshQueueTable() {
+        queueTableModel.setRowCount(0);
+        List<Order> pending = orderQueue.getPendingOrders();
+        queueCountLabel.setText("Черга: " + pending.size());
+        for (Order o : pending) {
+            queueTableModel.addRow(new Object[]{
+                    shortId(o.getId()),
+                    o.getDestination().toString(),
+                    o.getWeight()
             });
         }
     }
@@ -252,6 +371,16 @@ public class AppUI extends JFrame {
     }
 
     // --- Styled helpers ---
+    private JButton createButton(String text, Color bg) {
+        JButton btn = new JButton(text);
+        btn.setBackground(bg);
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        return btn;
+    }
+
     private JTable createStyledTable(DefaultTableModel model) {
         JTable table = new JTable(model);
         table.setBackground(new Color(35, 35, 35));
@@ -346,7 +475,7 @@ public class AppUI extends JFrame {
             }
             g2.setStroke(new BasicStroke(1));
 
-            // Draw orders (red diamonds)
+            // Draw orders (diamonds)
             for (Order o : orders) {
                 int ox = offX + (int)(o.getDestination().getX() * scaleX);
                 int oy = offY + (int)(o.getDestination().getY() * scaleY);
@@ -395,11 +524,18 @@ public class AppUI extends JFrame {
                 FontMetrics fm = g2.getFontMetrics();
                 String label = c.getId();
                 g2.drawString(label, cx - fm.stringWidth(label) / 2, cy + 4);
+
+                // Show completed count
+                if (c.getCompletedOrdersToday() > 0) {
+                    g2.setFont(new Font("Segoe UI", Font.PLAIN, 9));
+                    g2.setColor(new Color(180, 255, 180));
+                    g2.drawString("×" + c.getCompletedOrdersToday(), cx + r + 2, cy - r + 4);
+                }
             }
 
             // Legend
             int lx = offX + 5;
-            int ly = offY + h - 70;
+            int ly = offY + h - 85;
             g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
 
             g2.setColor(new Color(100, 181, 246));
@@ -419,17 +555,21 @@ public class AppUI extends JFrame {
 
             g2.setColor(new Color(76, 175, 80));
             int[] dx = {lx + 5, lx + 10, lx + 5, lx};
-            int[] dy = {ly + 45, ly + 50, ly + 55, ly + 50};
+            int[] dy = {ly + 48, ly + 53, ly + 58, ly + 53};
             g2.fillPolygon(dx, dy, 4);
             g2.setColor(new Color(200, 200, 200));
-            g2.drawString("Замовлення (призначене)", lx + 15, ly + 55);
+            g2.drawString("Замовлення (призначене)", lx + 15, ly + 58);
 
             g2.setColor(new Color(244, 67, 54));
             int[] dx2 = {lx + 5, lx + 10, lx + 5, lx};
-            int[] dy2 = {ly + 58, ly + 63, ly + 68, ly + 63};
+            int[] dy2 = {ly + 63, ly + 68, ly + 73, ly + 68};
             g2.fillPolygon(dx2, dy2, 4);
             g2.setColor(new Color(200, 200, 200));
-            g2.drawString("Замовлення (без кур'єра)", lx + 15, ly + 68);
+            g2.drawString("Замовлення (в черзі)", lx + 15, ly + 73);
+
+            g2.setColor(new Color(180, 255, 180));
+            g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            g2.drawString("×N = виконано сьогодні", lx + 15, ly + 85);
         }
     }
 

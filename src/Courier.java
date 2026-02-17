@@ -4,12 +4,14 @@ public class Courier {
     private Point location;
     private CourierStatus status;
     private final TransportType transportType;
+    private int completedOrdersToday;
 
     public Courier(String id, Point location, TransportType transportType) {
         this.id = id;
         this.location = location;
         this.status = CourierStatus.AVAILABLE;
         this.transportType = transportType;
+        this.completedOrdersToday = 0;
     }
 
     public String getId() {
@@ -44,6 +46,22 @@ public class Courier {
         return weight <= transportType.getMaxWeight();
     }
 
+    public int getCompletedOrdersToday() {
+        return completedOrdersToday;
+    }
+
+    /**
+     * Завершує поточне замовлення: збільшує лічильник та звільняє кур'єра.
+     */
+    public void completeOrder() {
+        this.completedOrdersToday++;
+        this.status = CourierStatus.AVAILABLE;
+    }
+
+    public void resetDailyStats() {
+        this.completedOrdersToday = 0;
+    }
+
     @Override
     public String toString() {
         return "Courier{" +
@@ -52,6 +70,7 @@ public class Courier {
                 ", status=" + status +
                 ", transport=" + transportType +
                 " (max " + transportType.getMaxWeight() + "kg)" +
+                ", completedToday=" + completedOrdersToday +
                 '}';
     }
 }
